@@ -71,18 +71,6 @@
   <label>マウス感度</label>
   <input type="range" id="sensitivity" min="0.1" max="2.0" step="0.1">
 
-  <label>前進キー</label>
-  <input type="text" id="keyForward">
-
-  <label>ジャンプキー</label>
-  <input type="text" id="keyJump">
-
-  <label>建築キー（壁設置）</label>
-  <input type="text" id="keyBuild">
-
-  <label>編集キー（削除）</label>
-  <input type="text" id="keyEdit">
-
   <button id="startBtn">スタート</button>
 </div>
 
@@ -91,7 +79,7 @@
 <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/examples/js/controls/PointerLockControls.js"></script>
 <script>
-    const scene = new THREE.Scene();
+  const scene = new THREE.Scene();
   const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
   const renderer = new THREE.WebGLRenderer({ canvas: document.getElementById('gameCanvas') });
   renderer.setSize(window.innerWidth, window.innerHeight);
@@ -105,124 +93,96 @@
   floor.rotation.x = -Math.PI / 2;
   scene.add(floor);
 
-  // 簡単な立方体（編集対象）
-  const box = new THREE.Mesh(
-    new THREE.BoxGeometry(1, 1, 1),
-    new THREE.MeshStandardMaterial({ color: 0x0000ff })
+  // ターゲット (エイム練習用)
+  const target = new THREE.Mesh(
+    new THREE.SphereGeometry(0.5, 32, 32),
+    new THREE.MeshStandardMaterial({ color: 0xff0000 })
   );
-  box.position.y = 0.5;
-  scene.add(box);
+  target.position.set(0, 1, -5);
+  scene.add(target);
+
+  function moveTarget() {
+    target.position.set(
+      Math.random() * 20 - 10,
+      Math.random() * 5 + 1,
+      Math.random() * 20 - 10
+    );
+  }
+
+  // 編集練習用ブロック
+  const blocks = [];
+  for (let i = 0; i < 10; i++) {
+    const block = new THREE.Mesh(
+      new THREE.BoxGeometry(2, 2, 0.1),
+      new THREE.MeshStandardMaterial({ color: 0x00aaff })
+    );
+    block.position.set(i * 3 - 15, 1, 0);
+    blocks.push(block);
+    scene.add(block);
+  }
 
   // ライト
   const light = new THREE.DirectionalLight(0xffffff, 1);
   light.position.set(5, 10, 7.5);
   scene.add(light);
 
-  // カメラ
-  camera.position.set(3, 2, 5);
-  camera.lookAt(0, 0, 0);
+  // カメラ初期設定
+  camera.position.set(0, 2, 10);
+  camera.lookAt(0, 1, 0);
 
-  // プレイヤーキー配置
-  let keyForward = 'w';
-  let keyJump = ' ';
-  let keyBuild = 'b';
-  let keyEdit = 'e';
-
+  // プレイヤー操作設定
   let moveForward = false;
-  let moveLeft = false;
   let moveBackward = false;
+  let moveLeft = false;
   let moveRight = false;
-  let jump = false;
-  let build = false;
-  let edit = false;
 
-  // 初期設定ロード（ローカルストレージ）
-  window.onload = () => {
-    const savedKeys = JSON.parse(localStorage.getItem('keyBindings')) || {};
-    keyForward = savedKeys.forward || 'w';
-    keyJump = savedKeys.jump || ' ';
-    keyBuild = savedKeys.build || 'b';
-    keyEdit = savedKeys.edit || 'e';
-    document.getElementById('keyForward').value = keyForward;
-    document.getElementById('keyJump').value = keyJump;
-    document.getElementById('keyBuild').value = keyBuild;
-    document.getElementById('keyEdit').value = keyEdit;
-    document.getElementById('sensitivity').value = localStorage.getItem('sensitivity') || 1.0;
-  }
-
-  // キー変更
-  document.getElementById('keyForward').addEventListener('input', (e) => { keyForward = e.target.value; saveKeys(); });
-  document.getElementById('keyJump').addEventListener('input', (e) => { keyJump = e.target.value; saveKeys(); });
-  document.getElementById('keyBuild').addEventListener('input', (e) => { keyBuild = e.target.value; saveKeys(); });
-  document.getElementById('keyEdit').addEventListener('input', (e) => { keyEdit = e.target.value; saveKeys(); });
-  document.getElementById('sensitivity').addEventListener('input', (e) => {
-    localStorage.setItem('sensitivity', e.target.value);
+  // キーボード操作
+  document.addEventListener('keydown', (e) => {
+    switch (e.key.toLowerCase()) {
+      case 'w': moveForward = true; break;
+      case 's': moveBackward = true; break;
+      case 'a': moveLeft = true; break;
+      case 'd': moveRight = true; break;
+    }
   });
 
-  function saveKeys() {
-    const keys = { forward: keyForward, jump: keyJump, build: keyBuild, edit: keyEdit };
-    localStorage.setItem('keyBindings', JSON.stringify(keys));
-  }
+  document.addEventListener('keyup', (e) => {
+    switch (e.key.toLowerCase()) {
+      case 'w': moveForward = false; break;
+      case 's': moveBackward = false; break;
+      case 'a': moveLeft = false; break;
+      case 'd': moveRight = false; break;
+    }
+  });
 
-  // アニメーション
+  // アニメーションループ
   function animate() {
     requestAnimationFrame(animate);
 
+    // カメラ移動
     if (moveForward) camera.position.z -= 0.1;
     if (moveBackward) camera.position.z += 0.1;
     if (moveLeft) camera.position.x -= 0.1;
     if (moveRight) camera.position.x += 0.1;
-    if (jump) camera.position.y += 0.1;
-
-    if (build) {
-      box.position.x += 0.1;
-    }
-
-    if (edit) {
-      box.rotation.y += 0.01;
-    }
 
     renderer.render(scene, camera);
   }
 
   animate();
 
-  // イベントリスナー
-  document.addEventListener('keydown', (e) => {
-    switch (e.key.toLowerCase()) {
-      case keyForward: moveForward = true; break;
-      case 'a': moveLeft = true; break;
-      case keyBackward: moveBackward = true; break;
-      case 'd': moveRight = true; break;
-      case keyJump: jump = true; break;
-      case keyBuild: build = true; break;
-      case keyEdit: edit = true; break;
-    }
-  });
-
-  document.addEventListener('keyup', (e) => {
-    switch (e.key.toLowerCase()) {
-      case keyForward: moveForward = false; break;
-      case 'a': moveLeft = false; break;
-      case keyBackward: moveBackward = false; break;
-      case 'd': moveRight = false; break;
-      case keyJump: jump = false; break;
-      case keyBuild: build = false; break;
-      case keyEdit: edit = false; break;
-    }
-  });
-
-  // UI操作
+  // スタートボタン
   document.getElementById('startBtn').addEventListener('click', () => {
     const mode = document.getElementById('mode').value;
     if (mode === 'aim') {
-      console.log("エイム練習モード選択");
-    } else {
-      console.log("編集練習モード選択");
+      alert('エイム練習モードを開始します!');
+      setInterval(moveTarget, 1000); // ターゲット移動
+    } else if (mode === 'edit') {
+      alert('編集練習モードを開始します!');
+      blocks.forEach(block => block.material.color.set(0xffa500)); // 色変更
     }
   });
 
-  // リサイズ対応
+  // ウィンドウサイズ変更対応
   window.addEventListener('resize', () => {
     const width = window.innerWidth;
     const height = window.innerHeight;
@@ -230,54 +190,6 @@
     camera.updateProjectionMatrix();
     renderer.setSize(width, height);
   });
-</script>
-</body>
-</html>
-<script>
-// ここからさらに機能追加や調整も可能！
-// ゲームパッド操作対応
-
-const gamepadInput = () => {
-  const gamepads = navigator.getGamepads();
-  if (gamepads[0]) {
-    const gamepad = gamepads[0];
-
-    // 左スティックで移動
-    if (gamepad.axes[1] < -0.1) { moveForward = true; } else { moveForward = false; }
-    if (gamepad.axes[1] > 0.1) { moveBackward = true; } else { moveBackward = false; }
-    if (gamepad.axes[0] < -0.1) { moveLeft = true; } else { moveLeft = false; }
-    if (gamepad.axes[0] > 0.1) { moveRight = true; } else { moveRight = false; }
-
-    // ボタンAでジャンプ
-    if (gamepad.buttons[0].pressed) { jump = true; } else { jump = false; }
-
-    // ボタンBで建築
-    if (gamepad.buttons[1].pressed) { build = true; } else { build = false; }
-
-    // ボタンXで編集
-    if (gamepad.buttons[2].pressed) { edit = true; } else { edit = false; }
-  }
-};
-
-const gamepadLoop = () => {
-  gamepadInput();
-  requestAnimationFrame(gamepadLoop);
-};
-
-if (navigator.getGamepads) {
-  gamepadLoop();
-}
-
-// 初回アクセス時にゲームパッド情報をリセット
-if (navigator.getGamepads) {
-  window.addEventListener("gamepadconnected", () => {
-    console.log("ゲームパッドが接続されました");
-  });
-  window.addEventListener("gamepaddisconnected", () => {
-    console.log("ゲームパッドが切断されました");
-  });
-}
-
 </script>
 
 </body>
