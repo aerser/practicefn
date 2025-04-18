@@ -71,13 +71,27 @@
   <label>マウス感度</label>
   <input type="range" id="sensitivity" min="0.1" max="2.0" step="0.1">
 
+  <label>前進キー</label>
+  <input type="text" id="keyForward">
+
+  <label>ジャンプキー</label>
+  <input type="text" id="keyJump">
+
+  <label>建築キー（壁設置）</label>
+  <input type="text" id="keyBuild">
+
+  <label>編集キー（削除）</label>
+  <input type="text" id="keyEdit">
+
+  <label>ゲームパッド感度</label>
+  <input type="range" id="gamepadSensitivity" min="0.1" max="2.0" step="0.1">
+
   <button id="startBtn">スタート</button>
 </div>
 
 <canvas id="gameCanvas"></canvas>
 
 <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/three@0.160.0/examples/js/controls/PointerLockControls.js"></script>
 <script>
   const scene = new THREE.Scene();
   const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
@@ -85,86 +99,109 @@
   renderer.setSize(window.innerWidth, window.innerHeight);
   renderer.setPixelRatio(window.devicePixelRatio);
 
-  // 床
-  const floor = new THREE.Mesh(
-    new THREE.PlaneGeometry(100, 100),
-    new THREE.MeshStandardMaterial({ color: 0x00ff00 })
-  );
-  floor.rotation.x = -Math.PI / 2;
-  scene.add(floor);
+  // プレイヤーの設定を管理する変数
+  let keyForward = 'w';
+  let keyJump = ' ';
+  let keyBuild = 'b';
+  let keyEdit = 'e';
+  let mouseSensitivity = 1.0;
+  let gamepadSensitivity = 1.0;
 
-  // ターゲット (エイム練習用)
-  const target = new THREE.Mesh(
-    new THREE.SphereGeometry(0.5, 32, 32),
-    new THREE.MeshStandardMaterial({ color: 0xff0000 })
-  );
-  target.position.set(0, 1, -5);
-  scene.add(target);
+  // 初期設定をローカルストレージからロード
+  window.onload = () => {
+    const savedSettings = JSON.parse(localStorage.getItem('playerSettings')) || {};
+    keyForward = savedSettings.keyForward || 'w';
+    keyJump = savedSettings.keyJump || ' ';
+    keyBuild = savedSettings.keyBuild || 'b';
+    keyEdit = savedSettings.keyEdit || 'e';
+    mouseSensitivity = savedSettings.mouseSensitivity || 1.0;
+    gamepadSensitivity = savedSettings.gamepadSensitivity || 1.0;
 
-  function moveTarget() {
-    target.position.set(
-      Math.random() * 20 - 10,
-      Math.random() * 5 + 1,
-      Math.random() * 20 - 10
-    );
+    // UIに設定を反映
+    document.getElementById('keyForward').value = keyForward;
+    document.getElementById('keyJump').value = keyJump;
+    document.getElementById('keyBuild').value = keyBuild;
+    document.getElementById('keyEdit').value = keyEdit;
+    document.getElementById('sensitivity').value = mouseSensitivity;
+    document.getElementById('gamepadSensitivity').value = gamepadSensitivity;
+  };
+
+  // 設定をローカルストレージに保存する関数
+  function saveSettings() {
+    const settings = {
+      keyForward,
+      keyJump,
+      keyBuild,
+      keyEdit,
+      mouseSensitivity,
+      gamepadSensitivity
+    };
+    localStorage.setItem('playerSettings', JSON.stringify(settings));
   }
 
-  // 編集練習用ブロック
-  const blocks = [];
-  for (let i = 0; i < 10; i++) {
-    const block = new THREE.Mesh(
-      new THREE.BoxGeometry(2, 2, 0.1),
-      new THREE.MeshStandardMaterial({ color: 0x00aaff })
-    );
-    block.position.set(i * 3 - 15, 1, 0);
-    blocks.push(block);
-    scene.add(block);
+  // UIのイベントリスナー
+  document.getElementById('keyForward').addEventListener('input', (e) => {
+    keyForward = e.target.value;
+    saveSettings();
+  });
+
+  document.getElementById('keyJump').addEventListener('input', (e) => {
+    keyJump = e.target.value;
+    saveSettings();
+  });
+
+  document.getElementById('keyBuild').addEventListener('input', (e) => {
+    keyBuild = e.target.value;
+    saveSettings();
+  });
+
+  document.getElementById('keyEdit').addEventListener('input', (e) => {
+    keyEdit = e.target.value;
+    saveSettings();
+  });
+
+  document.getElementById('sensitivity').addEventListener('input', (e) => {
+    mouseSensitivity = parseFloat(e.target.value);
+    saveSettings();
+  });
+
+  document.getElementById('gamepadSensitivity').addEventListener('input', (e) => {
+    gamepadSensitivity = parseFloat(e.target.value);
+    saveSettings();
+  });
+
+  // ゲームパッドの入力処理
+  function handleGamepadInput() {
+    const gamepads = navigator.getGamepads();
+    if (gamepads[0]) {
+      const gamepad = gamepads[0];
+
+      // スティック操作で移動
+      if (gamepad.axes[1] < -0.1) camera.position.z -= gamepadSensitivity * 0.1;
+      if (gamepad.axes[1] > 0.1) camera.position.z += gamepadSensitivity * 0.1;
+      if (gamepad.axes[0] < -0.1) camera.position.x -= gamepadSensitivity * 0.1;
+      if (gamepad.axes[0] > 0.1) camera.position.x += gamepadSensitivity * 0.1;
+
+      // ボタンでアクション
+      if (gamepad.buttons[0].pressed) console.log('ジャンプ');
+      if (gamepad.buttons[1].pressed) console.log('建築');
+      if (gamepad.buttons[2].pressed) console.log('編集');
+    }
   }
 
-  // ライト
-  const light = new THREE.DirectionalLight(0xffffff, 1);
-  light.position.set(5, 10, 7.5);
-  scene.add(light);
+  function gamepadLoop() {
+    handleGamepadInput();
+    requestAnimationFrame(gamepadLoop);
+  }
 
-  // カメラ初期設定
-  camera.position.set(0, 2, 10);
-  camera.lookAt(0, 1, 0);
-
-  // プレイヤー操作設定
-  let moveForward = false;
-  let moveBackward = false;
-  let moveLeft = false;
-  let moveRight = false;
-
-  // キーボード操作
-  document.addEventListener('keydown', (e) => {
-    switch (e.key.toLowerCase()) {
-      case 'w': moveForward = true; break;
-      case 's': moveBackward = true; break;
-      case 'a': moveLeft = true; break;
-      case 'd': moveRight = true; break;
-    }
-  });
-
-  document.addEventListener('keyup', (e) => {
-    switch (e.key.toLowerCase()) {
-      case 'w': moveForward = false; break;
-      case 's': moveBackward = false; break;
-      case 'a': moveLeft = false; break;
-      case 'd': moveRight = false; break;
-    }
-  });
+  // ゲームパッド対応
+  if (navigator.getGamepads) {
+    gamepadLoop();
+  }
 
   // アニメーションループ
   function animate() {
     requestAnimationFrame(animate);
-
-    // カメラ移動
-    if (moveForward) camera.position.z -= 0.1;
-    if (moveBackward) camera.position.z += 0.1;
-    if (moveLeft) camera.position.x -= 0.1;
-    if (moveRight) camera.position.x += 0.1;
-
     renderer.render(scene, camera);
   }
 
@@ -173,13 +210,7 @@
   // スタートボタン
   document.getElementById('startBtn').addEventListener('click', () => {
     const mode = document.getElementById('mode').value;
-    if (mode === 'aim') {
-      alert('エイム練習モードを開始します!');
-      setInterval(moveTarget, 1000); // ターゲット移動
-    } else if (mode === 'edit') {
-      alert('編集練習モードを開始します!');
-      blocks.forEach(block => block.material.color.set(0xffa500)); // 色変更
-    }
+    alert(`${mode === 'aim' ? 'エイム練習' : '編集練習'}モードを開始します!`);
   });
 
   // ウィンドウサイズ変更対応
