@@ -2,23 +2,23 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
-  <title>Fortnite練習モード</title>
+  <title>Fortnite練習サイト</title>
   <style>
-    body, html {
+    html, body {
       margin: 0;
       padding: 0;
       overflow: hidden;
-      font-family: 'Arial', sans-serif;
       background: #1e1f26;
-      color: white;
+      font-family: 'Arial', sans-serif;
     }
     #ui {
       position: absolute;
       top: 20px;
       left: 20px;
-      background: rgba(0,0,0,0.6);
-      padding: 15px;
+      background: rgba(0,0,0,0.7);
+      padding: 20px;
       border-radius: 10px;
+      color: white;
       z-index: 10;
     }
     #ui h1 {
@@ -26,35 +26,41 @@
       font-size: 20px;
       color: #00ffff;
     }
+    label {
+      font-size: 14px;
+      display: block;
+      margin-top: 10px;
+    }
     select, input[type="range"], input[type="text"] {
       width: 100%;
-      margin: 5px 0 10px;
+      margin-top: 5px;
       padding: 5px;
       border-radius: 5px;
       border: none;
     }
-    label {
-      font-size: 14px;
-    }
     #startBtn {
+      margin-top: 15px;
       padding: 10px;
       width: 100%;
+      background: #007bff;
       border: none;
-      background: #008cff;
       color: white;
       font-weight: bold;
       border-radius: 5px;
       cursor: pointer;
     }
     #startBtn:hover {
-      background: #0070cc;
+      background: #005fcc;
+    }
+    canvas {
+      display: block;
     }
   </style>
 </head>
 <body>
 
 <div id="ui">
-  <h1>Fortnite練習モード</h1>
+  <h1>Fortnite練習サイト</h1>
 
   <label>モード選択</label>
   <select id="mode">
@@ -63,13 +69,19 @@
   </select>
 
   <label>マウス感度</label>
-  <input type="range" id="sensitivity" min="0.1" max="2.0" step="0.1" value="1">
+  <input type="range" id="sensitivity" min="0.1" max="2.0" step="0.1">
 
-  <label>移動キー設定（前進）</label>
-  <input type="text" id="keyForward" value="w">
+  <label>前進キー</label>
+  <input type="text" id="keyForward">
 
   <label>ジャンプキー</label>
-  <input type="text" id="keyJump" value=" ">
+  <input type="text" id="keyJump">
+
+  <label>建築キー（壁設置）</label>
+  <input type="text" id="keyBuild">
+
+  <label>編集キー（削除）</label>
+  <input type="text" id="keyEdit">
 
   <button id="startBtn">スタート</button>
 </div>
@@ -79,138 +91,8 @@
 <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/examples/js/controls/PointerLockControls.js"></script>
 <script>
-  const settings = {
-    mode: localStorage.getItem("mode") || "aim",
-    sensitivity: parseFloat(localStorage.getItem("sensitivity") || 1),
-    keys: {
-      forward: localStorage.getItem("keyForward") || "w",
-      jump: localStorage.getItem("keyJump") || " ",
-    }
-  };
-
-  // UIに反映
-  document.getElementById("mode").value = settings.mode;
-  document.getElementById("sensitivity").value = settings.sensitivity;
-  document.getElementById("keyForward").value = settings.keys.forward;
-  document.getElementById("keyJump").value = settings.keys.jump;
-
-  document.getElementById("startBtn").onclick = () => {
-    // 設定保存
-    settings.mode = document.getElementById("mode").value;
-    settings.sensitivity = parseFloat(document.getElementById("sensitivity").value);
-    settings.keys.forward = document.getElementById("keyForward").value;
-    settings.keys.jump = document.getElementById("keyJump").value;
-
-    localStorage.setItem("mode", settings.mode);
-    localStorage.setItem("sensitivity", settings.sensitivity);
-    localStorage.setItem("keyForward", settings.keys.forward);
-    localStorage.setItem("keyJump", settings.keys.jump);
-
-    // UIを非表示
-    document.getElementById("ui").style.display = "none";
-
-    startGame();
-  };
-
-  function startGame() {
-    let scene = new THREE.Scene();
-    let camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-    let renderer = new THREE.WebGLRenderer({ canvas: document.getElementById("gameCanvas") });
-    renderer.setSize(window.innerWidth, window.innerHeight);
-
-    let controls = new THREE.PointerLockControls(camera, document.body);
-    document.body.addEventListener("click", () => controls.lock());
-
-    camera.position.set(0, 2, 5);
-    scene.add(new THREE.AmbientLight(0xffffff));
-
-    let floor = new THREE.Mesh(new THREE.PlaneGeometry(100, 100), new THREE.MeshBasicMaterial({ color: 0x008800 }));
-    floor.rotation.x = -Math.PI / 2;
-    scene.add(floor);
-
-    let bullets = [];
-    let objects = [];
-
-    if (settings.mode === "aim") {
-      // ターゲット生成
-      for (let i = 0; i < 5; i++) {
-        const target = new THREE.Mesh(
-          new THREE.SphereGeometry(0.5),
-          new THREE.MeshBasicMaterial({ color: 0xff0000 })
-        );
-        target.position.set(Math.random() * 20 - 10, 1, -Math.random() * 20);
-        scene.add(target);
-        objects.push(target);
-      }
-
-      document.addEventListener("click", () => {
-        const bullet = new THREE.Mesh(
-          new THREE.SphereGeometry(0.1),
-          new THREE.MeshBasicMaterial({ color: 0xffff00 })
-        );
-        bullet.position.copy(camera.position);
-        bullet.userData.velocity = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion).multiplyScalar(0.5);
-        bullets.push(bullet);
-        scene.add(bullet);
-      });
-    }
-
-    if (settings.mode === "edit") {
-      document.addEventListener("keydown", (e) => {
-        if (e.key.toLowerCase() === "b") {
-          const wall = new THREE.Mesh(
-            new THREE.BoxGeometry(2, 2, 0.1),
-            new THREE.MeshBasicMaterial({ color: 0x00aaff })
-          );
-          wall.position.copy(camera.position).add(new THREE.Vector3(0, 0, -5).applyQuaternion(camera.quaternion));
-          scene.add(wall);
-          objects.push(wall);
-        }
-        if (e.key.toLowerCase() === "e") {
-          // 編集（削除）
-          objects.forEach(obj => scene.remove(obj));
-          objects = [];
-        }
-      });
-    }
-
-    // キー入力
-    const pressed = {};
-    document.addEventListener("keydown", e => pressed[e.key.toLowerCase()] = true);
-    document.addEventListener("keyup", e => pressed[e.key.toLowerCase()] = false);
-
-    function animate() {
-      requestAnimationFrame(animate);
-
-      if (pressed[settings.keys.forward]) controls.moveForward(0.1 * settings.sensitivity);
-      if (pressed["a"]) controls.moveRight(-0.1 * settings.sensitivity);
-      if (pressed["d"]) controls.moveRight(0.1 * settings.sensitivity);
-
-      bullets.forEach(bullet => bullet.position.add(bullet.userData.velocity));
-
-      // 当たり判定
-      bullets.forEach(b => {
-        objects.forEach(o => {
-          if (b.position.distanceTo(o.position) < 0.5) {
-            scene.remove(o);
-            scene.remove(b);
-          }
-        });
-      });
-
-      renderer.render(scene, camera);
-    }
-
-    animate();
-  }
-
-  window.addEventListener("resize", () => location.reload());
-</script>
-  <script>
-  const scene = new THREE.Scene();
-  const camera = new THREE.PerspectiveCamera(
-    75, window.innerWidth / window.innerHeight, 0.1, 1000
-  );
+    const scene = new THREE.Scene();
+  const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
   const renderer = new THREE.WebGLRenderer({ canvas: document.getElementById('gameCanvas') });
   renderer.setSize(window.innerWidth, window.innerHeight);
   renderer.setPixelRatio(window.devicePixelRatio);
@@ -223,7 +105,7 @@
   floor.rotation.x = -Math.PI / 2;
   scene.add(floor);
 
-  // 簡単な立方体
+  // 簡単な立方体（編集対象）
   const box = new THREE.Mesh(
     new THREE.BoxGeometry(1, 1, 1),
     new THREE.MeshStandardMaterial({ color: 0x0000ff })
@@ -236,19 +118,111 @@
   light.position.set(5, 10, 7.5);
   scene.add(light);
 
-  // カメラ初期位置
+  // カメラ
   camera.position.set(3, 2, 5);
   camera.lookAt(0, 0, 0);
+
+  // プレイヤーキー配置
+  let keyForward = 'w';
+  let keyJump = ' ';
+  let keyBuild = 'b';
+  let keyEdit = 'e';
+
+  let moveForward = false;
+  let moveLeft = false;
+  let moveBackward = false;
+  let moveRight = false;
+  let jump = false;
+  let build = false;
+  let edit = false;
+
+  // 初期設定ロード（ローカルストレージ）
+  window.onload = () => {
+    const savedKeys = JSON.parse(localStorage.getItem('keyBindings')) || {};
+    keyForward = savedKeys.forward || 'w';
+    keyJump = savedKeys.jump || ' ';
+    keyBuild = savedKeys.build || 'b';
+    keyEdit = savedKeys.edit || 'e';
+    document.getElementById('keyForward').value = keyForward;
+    document.getElementById('keyJump').value = keyJump;
+    document.getElementById('keyBuild').value = keyBuild;
+    document.getElementById('keyEdit').value = keyEdit;
+    document.getElementById('sensitivity').value = localStorage.getItem('sensitivity') || 1.0;
+  }
+
+  // キー変更
+  document.getElementById('keyForward').addEventListener('input', (e) => { keyForward = e.target.value; saveKeys(); });
+  document.getElementById('keyJump').addEventListener('input', (e) => { keyJump = e.target.value; saveKeys(); });
+  document.getElementById('keyBuild').addEventListener('input', (e) => { keyBuild = e.target.value; saveKeys(); });
+  document.getElementById('keyEdit').addEventListener('input', (e) => { keyEdit = e.target.value; saveKeys(); });
+  document.getElementById('sensitivity').addEventListener('input', (e) => {
+    localStorage.setItem('sensitivity', e.target.value);
+  });
+
+  function saveKeys() {
+    const keys = { forward: keyForward, jump: keyJump, build: keyBuild, edit: keyEdit };
+    localStorage.setItem('keyBindings', JSON.stringify(keys));
+  }
 
   // アニメーション
   function animate() {
     requestAnimationFrame(animate);
-    box.rotation.y += 0.01;
+
+    if (moveForward) camera.position.z -= 0.1;
+    if (moveBackward) camera.position.z += 0.1;
+    if (moveLeft) camera.position.x -= 0.1;
+    if (moveRight) camera.position.x += 0.1;
+    if (jump) camera.position.y += 0.1;
+
+    if (build) {
+      box.position.x += 0.1;
+    }
+
+    if (edit) {
+      box.rotation.y += 0.01;
+    }
+
     renderer.render(scene, camera);
   }
+
   animate();
 
-  // ウィンドウリサイズ対応
+  // イベントリスナー
+  document.addEventListener('keydown', (e) => {
+    switch (e.key.toLowerCase()) {
+      case keyForward: moveForward = true; break;
+      case 'a': moveLeft = true; break;
+      case keyBackward: moveBackward = true; break;
+      case 'd': moveRight = true; break;
+      case keyJump: jump = true; break;
+      case keyBuild: build = true; break;
+      case keyEdit: edit = true; break;
+    }
+  });
+
+  document.addEventListener('keyup', (e) => {
+    switch (e.key.toLowerCase()) {
+      case keyForward: moveForward = false; break;
+      case 'a': moveLeft = false; break;
+      case keyBackward: moveBackward = false; break;
+      case 'd': moveRight = false; break;
+      case keyJump: jump = false; break;
+      case keyBuild: build = false; break;
+      case keyEdit: edit = false; break;
+    }
+  });
+
+  // UI操作
+  document.getElementById('startBtn').addEventListener('click', () => {
+    const mode = document.getElementById('mode').value;
+    if (mode === 'aim') {
+      console.log("エイム練習モード選択");
+    } else {
+      console.log("編集練習モード選択");
+    }
+  });
+
+  // リサイズ対応
   window.addEventListener('resize', () => {
     const width = window.innerWidth;
     const height = window.innerHeight;
@@ -256,7 +230,55 @@
     camera.updateProjectionMatrix();
     renderer.setSize(width, height);
   });
-</script
+</script>
+</body>
+</html>
+<script>
+// ここからさらに機能追加や調整も可能！
+// ゲームパッド操作対応
+
+const gamepadInput = () => {
+  const gamepads = navigator.getGamepads();
+  if (gamepads[0]) {
+    const gamepad = gamepads[0];
+
+    // 左スティックで移動
+    if (gamepad.axes[1] < -0.1) { moveForward = true; } else { moveForward = false; }
+    if (gamepad.axes[1] > 0.1) { moveBackward = true; } else { moveBackward = false; }
+    if (gamepad.axes[0] < -0.1) { moveLeft = true; } else { moveLeft = false; }
+    if (gamepad.axes[0] > 0.1) { moveRight = true; } else { moveRight = false; }
+
+    // ボタンAでジャンプ
+    if (gamepad.buttons[0].pressed) { jump = true; } else { jump = false; }
+
+    // ボタンBで建築
+    if (gamepad.buttons[1].pressed) { build = true; } else { build = false; }
+
+    // ボタンXで編集
+    if (gamepad.buttons[2].pressed) { edit = true; } else { edit = false; }
+  }
+};
+
+const gamepadLoop = () => {
+  gamepadInput();
+  requestAnimationFrame(gamepadLoop);
+};
+
+if (navigator.getGamepads) {
+  gamepadLoop();
+}
+
+// 初回アクセス時にゲームパッド情報をリセット
+if (navigator.getGamepads) {
+  window.addEventListener("gamepadconnected", () => {
+    console.log("ゲームパッドが接続されました");
+  });
+  window.addEventListener("gamepaddisconnected", () => {
+    console.log("ゲームパッドが切断されました");
+  });
+}
+
+</script>
 
 </body>
 </html>
