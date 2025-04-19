@@ -158,6 +158,16 @@ function animate() {
   requestAnimationFrame(animate);
   renderer.render(scene, camera);
 }
+// スタートボタンのクリックイベントリスナーを追加
+document.getElementById("startBtn").addEventListener("click", () => {
+  console.log("Start button clicked"); // デバッグ用ログ
+  startTraining(); // トレーニングを開始する関数を呼び出し
+});
 
+// モード選択のチェンジイベントリスナー（デバッグ用）
+document.getElementById("mode").addEventListener("change", (e) => {
+  mode = e.target.value;
+  console.log("Mode changed to:", mode); // 選択されたモードをログ出力
+});
 // Initialize the app
 window.onload = init;
