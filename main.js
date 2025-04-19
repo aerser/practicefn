@@ -1,4 +1,7 @@
-let scene, camera, renderer;
+// Import OrbitControls from Three.js
+import { OrbitControls } from "https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/controls/OrbitControls.js";
+
+let scene, camera, renderer, controls;
 let mode = "aim";
 let mouseSensitivity = 1.0;
 let keyEdit = "E";
@@ -26,15 +29,20 @@ function init() {
 
     // Setup Three.js scene
     scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x1e1f26); // 背景色設定
+    scene.background = new THREE.Color(0x1e1f26); // Set background color
 
     camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-    camera.position.set(0, 5, 15); // カメラ位置を調整
-    camera.lookAt(0, 0, -10);     // 壁の中央を見る
+    camera.position.set(0, 5, 15); // Set initial camera position
+    camera.lookAt(0, 0, -10);
 
     renderer = new THREE.WebGLRenderer();
     renderer.setSize(window.innerWidth, window.innerHeight);
     document.body.appendChild(renderer.domElement);
+
+    // Add OrbitControls for mouse movement
+    controls = new OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true; // Enable damping for smooth motion
+    controls.dampingFactor = 0.05; // Set damping factor
 
     // Add lights
     const light = new THREE.DirectionalLight(0xffffff, 1);
@@ -76,7 +84,7 @@ function startAimTraining() {
 function startEditTraining() {
     clearScene(); // Clear the previous scene
     createWalls(); // Automatically create walls
-    document.addEventListener("keydown", handleEditKey);
+    document.addEventListener("click", handleGridClick); // Add click listener for grid interactions
 }
 
 function createWalls() {
@@ -132,17 +140,20 @@ function createWall(x, y, z) {
     walls.push(wall);
 }
 
-function handleEditKey(event) {
-    if (event.key.toUpperCase() === keyEdit) {
-        const raycaster = new THREE.Raycaster();
-        raycaster.setFromCamera(new THREE.Vector2(0, 0), camera);
-        const intersects = raycaster.intersectObjects(walls);
-        if (intersects.length > 0) {
-            selectedWall = intersects[0].object;
-            showEditGrid(selectedWall);
-        }
-    } else if (event.key === keyConfirm && selectedWall) {
-        confirmEdit(selectedWall);
+function handleGridClick(event) {
+    const raycaster = new THREE.Raycaster();
+    const mouse = new THREE.Vector2();
+    mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+    mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+    raycaster.setFromCamera(mouse, camera);
+
+    const intersects = raycaster.intersectObject(editGrid);
+    if (intersects.length > 0) {
+        const selectedCell = intersects[0];
+        console.log("Grid cell selected:", selectedCell.point);
+        // Add any logic for selecting/editing the grid cell here
+    } else {
+        console.log("No grid cell intersected.");
     }
 }
 
@@ -157,14 +168,7 @@ function showEditGrid(wall) {
     editGrid.position.copy(wall.position);
     editGrid.rotation.copy(wall.rotation);
     scene.add(editGrid);
-}
-
-function confirmEdit(wall) {
-    scene.remove(wall);
-    scene.remove(editGrid);
-    walls = walls.filter((w) => w !== wall);
-    selectedWall = null;
-    editGrid = null;
+    console.log("Edit grid displayed on wall at:", wall.position);
 }
 
 function clearScene() {
@@ -179,7 +183,9 @@ function clearScene() {
 
 function animate() {
     requestAnimationFrame(animate);
+    controls.update(); // Update controls
     renderer.render(scene, camera);
 }
 
+// Initialize the app
 window.onload = init;
