@@ -22,17 +22,22 @@ function init() {
     keyReset = savedSettings.keyReset || "R";
 
     // UI bindings
-    document.getElementById("sensitivity").value = mouseSensitivity;
-    document.getElementById("keyEdit").value = keyEdit;
-    document.getElementById("keyConfirm").value = keyConfirm;
-    document.getElementById("startBtn").addEventListener("click", startTraining);
-    document.getElementById("mode").addEventListener("change", (e) => {
+    const startBtn = document.getElementById("startBtn");
+    const modeSelect = document.getElementById("mode");
+
+    if (!startBtn || !modeSelect) {
+        console.error("UI elements not found. Check your HTML.");
+        return;
+    }
+
+    startBtn.addEventListener("click", startTraining);
+    modeSelect.addEventListener("change", (e) => {
         mode = e.target.value;
     });
 
     // Load audio effects
-    audioEdit = new Audio("edit-mode.mp3"); // 編集モード効果音
-    audioConfirm = new Audio("confirm.mp3"); // 確定効果音
+    audioEdit = new Audio("edit-mode.mp3");
+    audioConfirm = new Audio("confirm.mp3");
 
     // Setup Three.js scene
     scene = new THREE.Scene();
@@ -115,7 +120,7 @@ function createWall(x, y, z) {
 
 function handleEditKey(event) {
     if (event.key.toUpperCase() === keyEdit) {
-        audioEdit.play(); // 再生
+        audioEdit.play();
         const raycaster = new THREE.Raycaster();
         raycaster.setFromCamera(new THREE.Vector2(0, 0), camera);
         const intersects = raycaster.intersectObjects(walls);
@@ -124,7 +129,7 @@ function handleEditKey(event) {
             showEditGrid(selectedWall);
         }
     } else if (event.key.toUpperCase() === keyConfirm && selectedWall) {
-        audioConfirm.play(); // 再生
+        audioConfirm.play();
         confirmEdit();
     } else if (event.key.toUpperCase() === keyReset) {
         resetWall();
@@ -165,7 +170,6 @@ function handleMouseDrag(event) {
 }
 
 function getGridCellIndex(point) {
-    // Calculate the cell index based on the point position
     const localPoint = new THREE.Vector3();
     editGrid.worldToLocal(localPoint.copy(point));
     const col = Math.floor((localPoint.x + 2.5) / (5 / 3));
