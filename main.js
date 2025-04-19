@@ -1,27 +1,25 @@
-import { OrbitControls } from "https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/controls/OrbitControls.js";
+import { initializeDisplay, animate, scene } from "./playdisplay.js";
 
-let scene, camera, renderer, controls;
 let mode = "aim";
 let mouseSensitivity = 1.0;
-let keyEdit = "E";
-let keyConfirm = "Enter";
-let keyReset = "R";
 let targets = [];
 let walls = [];
 let selectedWall = null;
 let editGrid = null;
 let selectedCells = [];
+let keyEdit = "E";
+let keyConfirm = "Enter";
+let keyReset = "R";
 let audioEdit, audioConfirm;
 
+/**
+ * 初期化関数
+ */
 function init() {
-    // Load settings from localStorage
-    const savedSettings = JSON.parse(localStorage.getItem("settings")) || {};
-    mouseSensitivity = savedSettings.mouseSensitivity || 1.0;
-    keyEdit = savedSettings.keyEdit || "E";
-    keyConfirm = savedSettings.keyConfirm || "Enter";
-    keyReset = savedSettings.keyReset || "R";
+    // 描写の初期化
+    initializeDisplay();
 
-    // UI bindings
+    // UIの設定
     const startBtn = document.getElementById("startBtn");
     const modeSelect = document.getElementById("mode");
 
@@ -35,50 +33,17 @@ function init() {
         mode = e.target.value;
     });
 
-    // Load audio effects
-    audioEdit = new Audio("edit-mode.mp3");
-    audioConfirm = new Audio("confirm.mp3");
+    // 音声ファイルのロード
+    audioEdit = new Audio("edit-mode.mp3"); // 編集モード効果音
+    audioConfirm = new Audio("confirm.mp3"); // 確定時効果音
 
-    // Setup Three.js scene
-    scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x1e1f26);
-
-    camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-    camera.position.set(0, 5, 15);
-    camera.lookAt(0, 0, -10);
-
-    renderer = new THREE.WebGLRenderer();
-    renderer.setSize(window.innerWidth, window.innerHeight);
-    document.body.appendChild(renderer.domElement);
-
-    // Add OrbitControls for camera movement
-    controls = new OrbitControls(camera, renderer.domElement);
-    controls.enableDamping = true;
-    controls.dampingFactor = 0.05;
-
-    // Add lights
-    const light = new THREE.DirectionalLight(0xffffff, 1);
-    light.position.set(0, 10, 10);
-    scene.add(light);
-
-    // Add ground
-    const groundGeometry = new THREE.PlaneGeometry(100, 100);
-    const groundMaterial = new THREE.MeshLambertMaterial({ color: 0x555555 });
-    const ground = new THREE.Mesh(groundGeometry, groundMaterial);
-    ground.rotation.x = -Math.PI / 2;
-    scene.add(ground);
-
-    // Handle window resize
-    window.addEventListener("resize", () => {
-        camera.aspect = window.innerWidth / window.innerHeight;
-        camera.updateProjectionMatrix();
-        renderer.setSize(window.innerWidth, window.innerHeight);
-    });
-
-    // Start render loop
+    // アニメーション開始
     animate();
 }
 
+/**
+ * トレーニングの開始
+ */
 function startTraining() {
     clearScene();
     if (mode === "aim") {
@@ -88,11 +53,17 @@ function startTraining() {
     }
 }
 
+/**
+ * Aim Training の開始
+ */
 function startAimTraining() {
     spawnTargets(10);
     document.addEventListener("click", shootTarget);
 }
 
+/**
+ * Edit Training の開始
+ */
 function startEditTraining() {
     clearScene();
     createWalls();
@@ -101,6 +72,50 @@ function startEditTraining() {
     document.addEventListener("mouseup", handleMouseUp);
 }
 
+/**
+ * ターゲットを生成する
+ * @param {number} count ターゲットの数
+ */
+function spawnTargets(count) {
+    for (let i = 0; i < count; i++) {
+        const targetGeometry = new THREE.SphereGeometry(0.5, 32, 32);
+        const targetMaterial = new THREE.MeshLambertMaterial({ color: 0xff0000 });
+        const target = new THREE.Mesh(targetGeometry, targetMaterial);
+
+        // ランダムな位置に配置
+        target.position.set(
+            (Math.random() - 0.5) * 20,
+            Math.random() * 5 + 1,
+            (Math.random() - 0.5) * 20
+        );
+
+        scene.add(target);
+        targets.push(target);
+    }
+}
+
+/**
+ * ターゲットをクリックして撃つ
+ * @param {MouseEvent} event 
+ */
+function shootTarget(event) {
+    const raycaster = new THREE.Raycaster();
+    const mouse = new THREE.Vector2();
+    mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+    mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+    raycaster.setFromCamera(mouse, camera);
+
+    const intersects = raycaster.intersectObjects(targets);
+    if (intersects.length > 0) {
+        const target = intersects[0].object;
+        scene.remove(target);
+        targets = targets.filter((t) => t !== target);
+    }
+}
+
+/**
+ * 壁を生成する
+ */
 function createWalls() {
     const wallPositions = [{ x: 0, y: 0, z: -10 }];
     wallPositions.forEach((pos) => {
@@ -108,6 +123,12 @@ function createWalls() {
     });
 }
 
+/**
+ * 壁を作成し、シーンに追加
+ * @param {number} x X座標
+ * @param {number} y Y座標
+ * @param {number} z Z座標
+ */
 function createWall(x, y, z) {
     const wallGeometry = new THREE.PlaneGeometry(5, 5);
     const wallMaterial = new THREE.MeshLambertMaterial({ color: 0xaaaaaa, side: THREE.DoubleSide });
@@ -118,6 +139,10 @@ function createWall(x, y, z) {
     walls.push(wall);
 }
 
+/**
+ * 編集モードのキー入力を処理
+ * @param {KeyboardEvent} event 
+ */
 function handleEditKey(event) {
     if (event.key.toUpperCase() === keyEdit) {
         audioEdit.play();
@@ -136,6 +161,10 @@ function handleEditKey(event) {
     }
 }
 
+/**
+ * 編集用のグリッドを表示
+ * @param {THREE.Mesh} wall 編集対象の壁
+ */
 function showEditGrid(wall) {
     if (editGrid) scene.remove(editGrid);
     selectedCells = [];
@@ -150,6 +179,10 @@ function showEditGrid(wall) {
     scene.add(editGrid);
 }
 
+/**
+ * マウスドラッグでグリッドを選択
+ * @param {MouseEvent} event 
+ */
 function handleMouseDrag(event) {
     if (!editGrid) return;
     const raycaster = new THREE.Raycaster();
@@ -169,14 +202,10 @@ function handleMouseDrag(event) {
     }
 }
 
-function getGridCellIndex(point) {
-    const localPoint = new THREE.Vector3();
-    editGrid.worldToLocal(localPoint.copy(point));
-    const col = Math.floor((localPoint.x + 2.5) / (5 / 3));
-    const row = Math.floor((localPoint.y + 2.5) / (5 / 3));
-    return { row, col };
-}
-
+/**
+ * 選択されたグリッドをハイライト表示
+ * @param {Object} cellIndex 
+ */
 function highlightCell(cellIndex) {
     const cellGeometry = new THREE.PlaneGeometry(5 / 3, 5 / 3);
     const cellMaterial = new THREE.MeshBasicMaterial({
@@ -193,18 +222,40 @@ function highlightCell(cellIndex) {
     scene.add(cell);
 }
 
+/**
+ * グリッドのセルインデックスを取得
+ * @param {THREE.Vector3} point 
+ * @returns {Object} セルインデックス
+ */
+function getGridCellIndex(point) {
+    const localPoint = new THREE.Vector3();
+    editGrid.worldToLocal(localPoint.copy(point));
+    const col = Math.floor((localPoint.x + 2.5) / (5 / 3));
+    const row = Math.floor((localPoint.y + 2.5) / (5 / 3));
+    return { row, col };
+}
+
+/**
+ * 編集を確定
+ */
 function confirmEdit() {
     selectedCells.forEach((cell) => {
-        // Remove selected cells
+        // 選択されていないセル処理
     });
     resetWall();
 }
 
+/**
+ * 壁をリセット
+ */
 function resetWall() {
     clearScene();
     createWalls();
 }
 
+/**
+ * シーンをクリア
+ */
 function clearScene() {
     targets.forEach((target) => scene.remove(target));
     walls.forEach((wall) => scene.remove(wall));
@@ -216,11 +267,5 @@ function clearScene() {
     selectedCells = [];
 }
 
-function animate() {
-    requestAnimationFrame(animate);
-    controls.update();
-    renderer.render(scene, camera);
-}
-
-// Initialize the app
+// 初期化の呼び出し
 window.onload = init;
