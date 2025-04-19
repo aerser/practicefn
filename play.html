@@ -7,7 +7,6 @@
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <!-- UIコンテナ -->
     <div id="ui">
         <h1>Fortnite Practice</h1>
         <button id="startBtn">Start Training</button>
@@ -18,8 +17,11 @@
         <p>Use the dropdown to select your training mode.</p>
     </div>
 
-    <!-- Three.js のキャンバス -->
+    <!-- Three.js のスクリプト -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <script src="main.js"></script>
+    <!-- 描写処理 -->
+    <script type="module" src="playdisplay.js"></script>
+    <!-- ゲームロジック -->
+    <script type="module" src="main.js"></script>
 </body>
 </html>
