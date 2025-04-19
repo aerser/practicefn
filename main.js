@@ -1,4 +1,4 @@
-let scene, camera, renderer, controls;
+let scene, camera, renderer;
 let mode = "aim";
 let mouseSensitivity = 1.0;
 let keyEdit = "E";
@@ -52,6 +52,7 @@ function init() {
 }
 
 function startTraining() {
+  clearScene();
   if (mode === "aim") {
     startAimTraining();
   } else if (mode === "edit") {
@@ -60,13 +61,11 @@ function startTraining() {
 }
 
 function startAimTraining() {
-  clearScene();
   spawnTargets(10);
   document.addEventListener("click", shootTarget);
 }
 
 function startEditTraining() {
-  clearScene();
   createWall(0, 0, -5);
   document.addEventListener("keydown", handleEditKey);
 }
@@ -138,7 +137,6 @@ function showEditGrid(wall) {
 }
 
 function confirmEdit(wall) {
-  // Simulate editing by removing the wall for now.
   scene.remove(wall);
   scene.remove(editGrid);
   walls = walls.filter((w) => w !== wall);
