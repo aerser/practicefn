@@ -162,4 +162,4 @@ function animate() {
 }
 
 // Initialize the app
-init();
+window.onload = init;
