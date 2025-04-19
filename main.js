@@ -169,5 +169,24 @@ document.getElementById("mode").addEventListener("change", (e) => {
   mode = e.target.value;
   console.log("Mode changed to:", mode); // 選択されたモードをログ出力
 });
+function startEditTraining() {
+  clearScene(); // シーンをクリア
+  createWalls(); // 壁を自動生成
+  document.addEventListener("keydown", handleEditKey);
+}
+
+// 壁を複数自動生成する関数
+function createWalls() {
+  const wallPositions = [
+    { x: -5, y: 0, z: -10 },
+    { x: 0, y: 0, z: -10 },
+    { x: 5, y: 0, z: -10 },
+  ]; // 壁の配置座標を設定
+
+  wallPositions.forEach((pos) => {
+    createWall(pos.x, pos.y, pos.z); // 各位置に壁を生成
+  });
+  console.log("Walls created automatically:", wallPositions);
+}
 // Initialize the app
 window.onload = init;
