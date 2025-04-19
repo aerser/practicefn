@@ -1,15 +1,11 @@
 import {
     initializeDisplay,
     animate,
-    addObjectToScene,
-    removeObjectFromScene,
-    clearScene,
     scene,
 } from "./playdisplay.js";
 
 let mode = "aim";
 let targets = [];
-let walls = [];
 
 /**
  * 初期化処理
@@ -40,11 +36,11 @@ function init() {
  * トレーニングの開始
  */
 function startTraining() {
-    clearScene();
+    console.log("Starting training in mode:", mode);
     if (mode === "aim") {
         startAimTraining();
     } else if (mode === "edit") {
-        startEditTraining();
+        console.log("Edit Training not implemented yet.");
     }
 }
 
@@ -52,17 +48,8 @@ function startTraining() {
  * Aim Training の開始
  */
 function startAimTraining() {
+    console.log("Starting Aim Training...");
     spawnTargets(10);
-    document.addEventListener("click", shootTarget);
-}
-
-/**
- * Edit Training の開始
- */
-function startEditTraining() {
-    clearScene();
-    createWalls();
-    document.addEventListener("keydown", handleEditKey);
 }
 
 /**
@@ -81,64 +68,8 @@ function spawnTargets(count) {
             Math.random() * 5 + 1,
             (Math.random() - 0.5) * 20
         );
-
-        addObjectToScene(target);
+        scene.add(target);
         targets.push(target);
-    }
-}
-
-/**
- * ターゲットをクリックで撃つ
- * @param {MouseEvent} event 
- */
-function shootTarget(event) {
-    const raycaster = new THREE.Raycaster();
-    const mouse = new THREE.Vector2();
-    mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
-    mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
-    raycaster.setFromCamera(mouse, camera);
-
-    const intersects = raycaster.intersectObjects(targets);
-    if (intersects.length > 0) {
-        const target = intersects[0].object;
-        removeObjectFromScene(target);
-        targets = targets.filter((t) => t !== target);
-    }
-}
-
-/**
- * 壁を生成
- */
-function createWalls() {
-    const wallPositions = [{ x: 0, y: 0, z: -10 }];
-    wallPositions.forEach((pos) => {
-        createWall(pos.x, pos.y, pos.z);
-    });
-}
-
-/**
- * 壁を作成
- * @param {number} x X座標
- * @param {number} y Y座標
- * @param {number} z Z座標
- */
-function createWall(x, y, z) {
-    const wallGeometry = new THREE.PlaneGeometry(5, 5);
-    const wallMaterial = new THREE.MeshLambertMaterial({ color: 0xaaaaaa, side: THREE.DoubleSide });
-    const wall = new THREE.Mesh(wallGeometry, wallMaterial);
-    wall.position.set(x, y + 2.5, z);
-    wall.rotation.y = Math.PI;
-    addObjectToScene(wall);
-    walls.push(wall);
-}
-
-/**
- * 編集キーの処理
- * @param {KeyboardEvent} event 
- */
-function handleEditKey(event) {
-    if (event.key === "Enter") {
-        console.log("Edit mode confirmed.");
     }
 }
 
