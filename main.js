@@ -26,7 +26,12 @@ function init() {
 
     // Setup Three.js scene
     scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x1e1f26); // 背景色設定
+
     camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+    camera.position.set(0, 5, 15); // カメラ位置を調整
+    camera.lookAt(0, 0, -10);     // 壁の中央を見る
+
     renderer = new THREE.WebGLRenderer();
     renderer.setSize(window.innerWidth, window.innerHeight);
     document.body.appendChild(renderer.domElement);
@@ -43,9 +48,12 @@ function init() {
     ground.rotation.x = -Math.PI / 2;
     scene.add(ground);
 
-    // Camera setup
-    camera.position.set(0, 5, 10);
-    camera.lookAt(0, 0, -10);
+    // Handle window resize
+    window.addEventListener("resize", () => {
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+    });
 
     // Start render loop
     animate();
@@ -71,7 +79,6 @@ function startEditTraining() {
     document.addEventListener("keydown", handleEditKey);
 }
 
-// Function to create multiple walls at predefined positions
 function createWalls() {
     const wallPositions = [
         { x: -5, y: 0, z: -10 },
@@ -80,7 +87,7 @@ function createWalls() {
     ];
 
     wallPositions.forEach((pos) => {
-        createWall(pos.x, pos.y, pos.z); // Create walls at specified positions
+        createWall(pos.x, pos.y, pos.z);
     });
 
     console.log("Walls created at these positions:", wallPositions);
@@ -119,11 +126,10 @@ function createWall(x, y, z) {
     const wallGeometry = new THREE.PlaneGeometry(5, 5);
     const wallMaterial = new THREE.MeshLambertMaterial({ color: 0xaaaaaa, side: THREE.DoubleSide });
     const wall = new THREE.Mesh(wallGeometry, wallMaterial);
-    wall.position.set(x, y + 2.5, z); // Adjust y to place the wall above the ground
-    wall.rotation.y = Math.PI; // Rotate the wall to face the camera
+    wall.position.set(x, y + 2.5, z);
+    wall.rotation.y = Math.PI;
     scene.add(wall);
-    walls.push(wall); // Add to walls array for interaction
-    console.log("Wall created at:", wall.position);
+    walls.push(wall);
 }
 
 function handleEditKey(event) {
@@ -133,10 +139,7 @@ function handleEditKey(event) {
         const intersects = raycaster.intersectObjects(walls);
         if (intersects.length > 0) {
             selectedWall = intersects[0].object;
-            console.log("Wall selected for editing:", selectedWall);
             showEditGrid(selectedWall);
-        } else {
-            console.log("No wall intersected.");
         }
     } else if (event.key === keyConfirm && selectedWall) {
         confirmEdit(selectedWall);
@@ -154,7 +157,6 @@ function showEditGrid(wall) {
     editGrid.position.copy(wall.position);
     editGrid.rotation.copy(wall.rotation);
     scene.add(editGrid);
-    console.log("Edit grid displayed on wall at:", wall.position);
 }
 
 function confirmEdit(wall) {
@@ -180,5 +182,4 @@ function animate() {
     renderer.render(scene, camera);
 }
 
-// Initialize the app
 window.onload = init;
