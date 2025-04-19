@@ -1,10 +1,4 @@
-const scene = new THREE.Scene();
-const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-const renderer = new THREE.WebGLRenderer({ canvas: document.getElementById('gameCanvas') });
-renderer.setSize(window.innerWidth, window.innerHeight);
-renderer.setPixelRatio(window.devicePixelRatio);
-
-// プレイヤーの設定を管理する変数
+// プレイヤー設定の変数
 let keyForward = 'w';
 let keyJump = ' ';
 let keyBuild = 'b';
@@ -31,7 +25,7 @@ window.onload = () => {
   document.getElementById('gamepadSensitivity').value = gamepadSensitivity;
 };
 
-// 設定をローカルストレージに保存する関数
+// 設定をローカルストレージに保存
 function saveSettings() {
   const settings = {
     keyForward,
@@ -39,57 +33,41 @@ function saveSettings() {
     keyBuild,
     keyEdit,
     mouseSensitivity,
-    gamepadSensitivity
+    gamepadSensitivity,
   };
   localStorage.setItem('playerSettings', JSON.stringify(settings));
 }
 
-// UIのイベントリスナー
-document.getElementById('keyForward').addEventListener('input', (e) => {
-  keyForward = e.target.value;
-  saveSettings();
-});
-
-document.getElementById('keyJump').addEventListener('input', (e) => {
-  keyJump = e.target.value;
-  saveSettings();
-});
-
-document.getElementById('keyBuild').addEventListener('input', (e) => {
-  keyBuild = e.target.value;
-  saveSettings();
-});
-
-document.getElementById('keyEdit').addEventListener('input', (e) => {
-  keyEdit = e.target.value;
-  saveSettings();
-});
-
-document.getElementById('sensitivity').addEventListener('input', (e) => {
-  mouseSensitivity = parseFloat(e.target.value);
-  saveSettings();
-});
-
-document.getElementById('gamepadSensitivity').addEventListener('input', (e) => {
-  gamepadSensitivity = parseFloat(e.target.value);
-  saveSettings();
-});
-
 // エイム練習機能
 function startAimPractice() {
-  const target = document.createElement('div');
-  target.classList.add('target');
-  document.body.appendChild(target);
+  const canvas = document.getElementById('gameCanvas');
+  canvas.style.display = 'block';
+  const context = canvas.getContext('2d');
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
 
-  let duration = 10; // 秒数
+  let x = 50,
+    y = 50;
+
+  function drawTarget() {
+    context.clearRect(0, 0, canvas.width, canvas.height);
+    context.beginPath();
+    context.arc(x, y, 20, 0, Math.PI * 2, false);
+    context.fillStyle = 'red';
+    context.fill();
+    context.closePath();
+  }
+
+  let duration = 10; // 練習時間
   const interval = setInterval(() => {
     if (duration <= 0) {
       clearInterval(interval);
-      target.remove();
+      canvas.style.display = 'none';
       alert('エイム練習終了！');
     } else {
-      target.style.left = Math.random() * window.innerWidth + 'px';
-      target.style.top = Math.random() * window.innerHeight + 'px';
+      x = Math.random() * canvas.width;
+      y = Math.random() * canvas.height;
+      drawTarget();
       duration--;
     }
   }, 1000);
@@ -97,11 +75,21 @@ function startAimPractice() {
 
 // 編集練習機能
 function startEditPractice() {
+  const canvas = document.getElementById('gameCanvas');
+  canvas.style.display = 'none'; // 編集練習では描画しない
+  const gameContainer = document.getElementById('ui');
+  gameContainer.innerHTML = ''; // 以前の内容をクリア
+
   const builds = ['壁', '床', '屋根', '階段'];
   builds.forEach((build, index) => {
     const element = document.createElement('div');
     element.className = 'build-piece';
-    element.style.left = `${index * 150}px`;
+    element.style.position = 'absolute';
+    element.style.width = '100px';
+    element.style.height = '100px';
+    element.style.backgroundColor = 'gray';
+    element.style.left = `${index * 120 + 100}px`;
+    element.style.top = '200px';
     element.textContent = build;
     document.body.appendChild(element);
 
